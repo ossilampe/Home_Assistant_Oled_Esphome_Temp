@@ -1,0 +1,198 @@
+esphome:
+  name: o-led-ofen-hans
+  friendly_name: O-led_Ofen_Hans
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "ehVkEupCyvai8k7qS39b36Frga+UXJh+dS/GfCth2xY="
+
+ota:
+  password: "ecaa1c43e6c74eb1400c457ed4c00352"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "O-Led-Ofen-Hans Fallback Hotspot"
+    password: "YjMMXg68Hg7B"
+
+captive_portal:
+
+sensor:
+  - platform: homeassistant
+    name: "mittelwert Temperatur"
+    id: mittelwert_temperatur
+    entity_id: sensor.temperatur_aussen_mittelwert
+    internal: true
+
+  - platform: homeassistant
+    name: "mittelwert Temperatur"
+    id: mittelwert_feuchte
+    entity_id: sensor.huminity_aussen_mittelwert
+    internal: true
+
+  - platform: homeassistant
+    name: "Puffer_Oben"
+    id: pufferoben
+    entity_id: sensor.temperaturfuehler_puffer_oben_actual_temperature_ch1
+    internal: true
+
+  - platform: homeassistant
+    name: "Kamin"
+    id: kamin
+    entity_id: sensor.temperaturfuehler_puffer_2_temperaturfuehler_puffer_ofen2_actual_temperature_ch1
+    internal: true
+
+  - platform: homeassistant
+    name: "Solar-Akku"
+    id: solarakku
+    entity_id: sensor.victron_battery_soc
+    internal: true
+
+text_sensor:
+  - platform: homeassistant
+    entity_id: switch.warmepumpe_sensor
+    name: "zir"
+    id: zir
+
+  - platform: homeassistant
+    entity_id: switch.shelly_gas_brauchwasser_switch_0
+    name: "gas"
+    id: gas
+
+  - platform: homeassistant
+    entity_id: switch.shelly_waermepumpen_grid_switch_0
+    name: "grid"
+    id: grid 
+
+image:
+  - file: mdi:thermometer-auto
+    id: tempaicon
+    resize: 50x50  mdi:water-percent
+
+  - file: mdi:water-percent
+    id: huminiaicon
+    resize: 50x50  mdi:water-boiler
+
+  - file: mdi:water-boiler
+    id: boilericon
+    resize: 50x50  
+
+  - file: mdi:gas-burner
+    id: kaminicon
+    resize: 50x50  
+
+  - file: mdi:battery-charging-100
+    id: akku100icon
+    resize: 50x50  
+  - file: mdi:battery-charging-70
+    id: akku70icon
+    resize: 50x50
+  - file: mdi:battery-charging-50
+    id: akku50icon
+    resize: 50x50
+  - file: mdi:battery-charging-30
+    id: akku30icon
+    resize: 50x50
+  - file: mdi:battery-charging-10
+    id: akku10icon
+    resize: 50x50
+
+font:
+  - file: "gfonts://Roboto"
+    id: roboto
+    size: 10
+  - file: "gfonts://Roboto"
+    id: roboto1
+    size: 12
+  - file: "gfonts://Roboto"
+    id: roboto2
+    size: 14
+  - file: "gfonts://Roboto"
+    id: roboto3
+    size: 20
+  - file: "gfonts://Roboto"
+    id: roboto4
+    size: 22
+
+    
+# Example configuration entry
+i2c:
+  sda: D2
+  scl: D1
+
+display:
+  - platform: ssd1306_i2c
+    model: "SH1106 128x64"
+    reset_pin: D0
+    address: 0x3C
+    rotation: 180°
+    update_interval: 20s
+
+    id: sensor_display
+    pages:
+      - id: page1
+        lambda: |-
+          it.printf(60, 20, id(roboto4), "%.1f °C",id(mittelwert_temperatur).state );
+          it.image(5, 0, id(tempaicon));
+
+      - id: page2
+        lambda: |-
+          it.printf(60, 20, id(roboto4), "%.1f %%", id(mittelwert_feuchte).state );
+          it.image(2, 0, id(huminiaicon));
+
+      - id: page3
+        lambda: |-
+          it.printf(60, 20, id(roboto4), "%.1f °C",id(pufferoben).state );
+          it.image(5, 0, id(boilericon));
+
+      - id: page4
+        lambda: |-
+          it.printf(60, 20, id(roboto4), "%.1f °C",id(kamin).state );
+          it.image(5, 0, id(kaminicon));
+
+      - id: page5
+        lambda: |-
+          
+
+          if (id(solarakku).state <= 20) {
+            it.image(5, 0, id(akku10icon));
+            it.printf(60, 20, id(roboto4), "%.1f %%",id(solarakku).state );
+
+          } else if (id(solarakku).state >= 21  ) {
+            it.image(5, 0, id(akku30icon));
+            it.printf(60, 20, id(roboto4), "%.1f %%",id(solarakku).state );
+
+          } else if (id(solarakku).state >= 55  ) {
+            it.image(5, 0, id(akku50icon));
+            it.printf(60, 20, id(roboto4), "%.1f %%",id(solarakku).state );
+
+          } else if (id(solarakku).state >= 61  ) {
+            it.image(5, 0, id(akku70icon));
+            it.printf(60, 20, id(roboto4), "%.1f %%",id(solarakku).state );
+
+          } else {
+            it.image(5, 0, id(akku100icon));
+            it.printf(60, 20, id(roboto4), "%.1f %%",id(solarakku).state );
+          }
+
+
+
+interval:
+  - interval: 3s
+    then:
+      - display.page.show_next: sensor_display
+      - component.update: sensor_display   
+
+
+
+
